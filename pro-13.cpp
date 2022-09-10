@@ -36,6 +36,7 @@ int main(int argc, char *argv[]) {
 
 
     FIBITMAP *image32 = FreeImage_ConvertTo32Bits(image);
+    FreeImage_Unload(image);
 
     //pair<unsigned int, unsigned int> resolution(FreeImage_GetWidth(image32), FreeImage_GetHeight(image32));
     resolution image_resolution = {static_cast<int>(FreeImage_GetWidth(image32)),
@@ -60,6 +61,8 @@ int main(int argc, char *argv[]) {
             gray_image_array[i][j] = col.rgbRed;
         }
     }
+    FreeImage_Unload(image32);
+
     cout << "Image is GrayScale?: " << boolalpha << isGray << endl;
     if (!isGray) {
         for (int i = 0; i < image_resolution.height; ++i) {
@@ -70,8 +73,10 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+    raw_image_array.clear();
+    system("pause");
 
-    cout << FreeImage_GetWidth(image) << "x" << FreeImage_GetHeight(image) << endl;
+    cout << image_resolution.width << "x" << image_resolution.height << endl;
 
 
 }
