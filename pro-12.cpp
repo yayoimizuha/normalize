@@ -15,7 +15,7 @@ mt19937 engine(seed_gen());
 uniform_real_distribution<double> distribution(-0.15, 0.15);
 
 pair<unsigned int, vector<double>>
-get_range(int location, short width, const vector<double> &input_array);
+get_range(int location, short width, vector<unsigned char> input_array);
 
 double lsm(const vector<double> &data);
 
@@ -38,7 +38,7 @@ int main() {
     }
     fprintf(gnuplot, "set terminal windows color\n");
     fprintf(gnuplot, "set grid\n");
-    //fprintf(gnuplot, "set size square\n");
+    fprintf(gnuplot, "set size square\n");
     fprintf(gnuplot, "plot '-' using 1:2 w l title 'source sin(x)' lc 'yellow' lw 20,"
                      "'-' using 1:2 w l title 'random noise',"
                      "'-' using 1:2 w l title 'source + noise' lc rgb 0xaa000044,"
@@ -136,7 +136,6 @@ double lsm(const vector<double> &data) {
     vector<int> x_array;
     x_array.resize(length);
     iota(x_array.begin(), x_array.end(), 1);
-    //cout << length << endl;
     double a0, a1, A00, A01, A02, A11, A12, d;
     A00 = A01 = A02 = A11 = A12 = 0;
     for (int i = 0; i < length; ++i) {
