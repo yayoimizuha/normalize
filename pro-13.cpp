@@ -9,9 +9,6 @@
 #include <algorithm>
 #include <omp.h>
 #include <array>
-#include <limits>
-#include <locale>
-
 using namespace std;
 using namespace std::filesystem;
 
@@ -133,65 +130,29 @@ int main(int argc, char *argv[]) {
     FreeImage_Save(FIF_PNG, save_image_noise, ("noised_" + filename + ".png").c_str(), 0);
     FreeImage_DeInitialise();
 
-    FILE *gnuplot_1, *gnuplot_2;
-    if ((gnuplot_1 = popen(GNUPLOT_PATH, "w")) == nullptr) {
-        cerr << "Can't execute gnuplot_1. " << GNUPLOT_PATH << endl;
-        return EXIT_FAILURE;
-    }
-    if ((gnuplot_2 = popen(GNUPLOT_PATH, "w")) == nullptr) {
-        cerr << "Can't execute gnuplot_1. " << GNUPLOT_PATH << endl;
+    FILE *gnuplot;
+    if ((gnuplot = popen(GNUPLOT_PATH, "w")) == nullptr) {
+        cerr << "Can't execute gnuplot. " << GNUPLOT_PATH << endl;
         return EXIT_FAILURE;
     }
 
-    //fprintf(gnuplot_1, "set terminal windows color\n");
-    //fprintf(gnuplot_1, "set size ratio -1\n");
-    //fprintf(gnuplot_1, "set grid\n");
-    //fprintf(gnuplot_1, "set palette defined (0 'black',255 'white')\n");
-    //fprintf(gnuplot_1, "plot '-' matrix with image title 'de_noised'\n");
-    //fprintf(gnuplot_1, "e\n");
+    fprintf(gnuplot, "set terminal windows color\n");
+    fprintf(gnuplot, "set grid\n");
+    fprintf(gnuplot, "set logscale y\n");
+    fprintf(gnuplot, "plot '-' using 1:2 w lp title 'noise' ,'-' using 1:2 w lp title 'noise_fixed'\n");
+    fprintf(gnuplot, "e\n");
 
-    fprintf(gnuplot_2, "set terminal windows color\n");
-    //fprintf(gnuplot_2, "set size ratio -1\n");
-    fprintf(gnuplot_2, "set grid\n");
-    fprintf(gnuplot_2, "set logscale y\n");
-    //fprintf(gnuplot_2, "set palette defined (0 'black',255 'white')\n");
-    //fprintf(gnuplot_2, "plot '-' matrix with image title 'noise'\n");
-    fprintf(gnuplot_2, "plot '-' using 1:2 w lp title 'noise' ,'-' using 1:2 w lp title 'noise_fixed'\n");
-    fprintf(gnuplot_2, "e\n");
-
-
-    //for (int i = 0; i < image_resolution.height; ++i) {
-    //    for (int j = 0; j < image_resolution.width; ++j) {
-    //        fprintf(gnuplot_1, "%d\t", de_noised_image[i][j]);
-    //        fflush(gnuplot_1);
-    //    }
-    //    fprintf(gnuplot_1, "\n");
-    //    fflush(gnuplot_1);
-    //}
-    //fprintf(gnuplot_1, "e\n");
-
-    //for (int i = 0; i < image_resolution.height; ++i) {
-    //    for (int j = 0; j < image_resolution.width; ++j) {
-    //        fprintf(gnuplot_2, "%d\t", gray_image_array[i][j]);
-    //        fflush(gnuplot_2);
-    //    }
-    //    fprintf(gnuplot_2, "\n");
-    //    fflush(gnuplot_2);
-    //}
-    //fprintf(gnuplot_2, "e\n");
     for (int i = 0; i < counter.size(); ++i) {
         if (counter[i] == 0)continue;
-        fprintf(gnuplot_2, "%d\t%d\n", i, counter[i]);
+        fprintf(gnuplot, "%d\t%d\n", i, counter[i]);
     }
-    fprintf(gnuplot_2, "e\n");
+    fprintf(gnuplot, "e\n");
     for (int i = 0; i < counter.size(); ++i) {
         if (counter[i] == 0)continue;
-        fprintf(gnuplot_2, "%d\t%d\n", i, counter_1[i]);
+        fprintf(gnuplot, "%d\t%d\n", i, counter_1[i]);
     }
-    fprintf(gnuplot_2, "e\n");
-
-    pclose(gnuplot_1);
-    pclose(gnuplot_2);
+    fprintf(gnuplot, "e\n");
+    pclose(gnuplot);
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
@@ -247,9 +208,7 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             }
 
             int return_num;
-
             if (sum > sum_threshold || !has_6) {
-                //cout << i << "x" << j << "=" << sum << endl;
                 auto cont = get_range(j, 3, input_image[i]).second;
                 return_num = lsm(cont);
             } else {
