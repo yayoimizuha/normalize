@@ -25,6 +25,7 @@ struct resolution {
     int width;
     int height;
 };
+unsigned long long progress = 0, progress_before = 0;
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image);
 
@@ -162,6 +163,15 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
 #pragma omp parallel for
     for (int i = 0; i < image_resolution.height; ++i) {
         for (int j = 0; j < image_resolution.width; ++j) {
+            progress++;
+            if (static_cast<int>(progress * 100 / (image_resolution.width * image_resolution.height)) !=
+                static_cast<int>(progress_before * 100 / (image_resolution.width * image_resolution.height))) {
+                if (omp_get_thread_num() == 0) {
+                    cout << static_cast<int>(progress * 100 / (image_resolution.width * image_resolution.height))
+                         << "%" << endl;
+                }
+            };
+            progress_before++;
             auto color = input_image[i][j];
             vector<int> near_list;
             near_list.clear();
@@ -195,7 +205,6 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
 
             omp_set_lock(lock);
             if (sum > 400) {
-                //cout << i << "x" << j << "=" << sum << endl;
                 auto cont = get_range(j, 3, input_image[i]).second;
                 return_image[i][j] = lsm(cont);
             } else {
