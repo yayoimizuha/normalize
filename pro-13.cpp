@@ -8,12 +8,16 @@
 #include <random>
 #include <algorithm>
 #include <omp.h>
+#include <array>
+#include <limits>
+#include <locale>
 
 using namespace std;
 using namespace std::filesystem;
 
 #define GNUPLOT_PATH "C:\\Progra~1\\gnuplot\\bin\\gnuplot.exe -persist"
 #define NOISE_FREQ 1000
+#define COUNT_WIDTH 10
 
 pair<unsigned int, vector<double>>
 get_range(int location, short width, vector<unsigned char> input_array);
@@ -28,23 +32,35 @@ struct resolution {
     int width;
     int height;
 };
+array<int, static_cast<size_t>(1e+8)> counter = {};
+array<int, static_cast<size_t>(1e+8)> counter_1 = {};
+
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image);
 
 int main(int argc, char *argv[]) {
+    FreeImage_Initialise();
     cout << "FreeImage Library Version: " << FreeImage_GetVersion() << endl;
     cout << FreeImage_GetCopyrightMessage() << endl;
+    string argv1;
+    setlocale(LC_ALL, "");
+    wchar_t *wc = (wchar_t *) calloc(_mbstrlen(argv[1]) + 1, MB_LEN_MAX);
     if (argc != 2) {
         cerr << "Invalid argument." << argc << endl;
         return EXIT_FAILURE;
     } else {
-        if (exists(argv[1])) {
-            cout << "File exist: " << argv[1] << endl;
+        argv1 = argv[1];
+        mbstowcs(wc, argv[1], _mbstrlen(argv[1]));
+        if (exists(wc)) {
+            cout << "File exist: " + argv1 << endl;
         } else {
-            cerr << "File not exist: " << argv[1] << endl;
+            cerr << "File not exist: " + argv1 << endl;
             return EXIT_FAILURE;
         }
     }
+    auto filepath = path(argv[1]);
+    auto filename = filepath.filename().string();
+    cout << filename << endl;
 
     FREE_IMAGE_FORMAT FIF = FreeImage_GetFileType(argv[1]);
     FIBITMAP *image = FreeImage_Load(FIF, argv[1]);
@@ -63,7 +79,7 @@ int main(int argc, char *argv[]) {
     vector<vector<uint8_t>> gray_image_array;
     raw_image_array.resize(image_resolution.height);
     gray_image_array.resize(image_resolution.height);
-    //Â∑¶‰∏ã„Åã„ÇâÂè≥‰∏ä
+    //ç∂â∫Ç©ÇÁâEè„
     for (int i = 0; i < image_resolution.height; ++i) {
         raw_image_array[i].resize(image_resolution.width);
         gray_image_array[i].resize(image_resolution.width);
@@ -93,13 +109,29 @@ int main(int argc, char *argv[]) {
 
     cout << image_resolution.width << "x" << image_resolution.height << endl;
 
-    //„Éé„Ç§„Ç∫„ÇíÁîüÊàê
+    //ÉmÉCÉYÇê∂ê¨
     for (int i = 0; i < image_resolution.width * image_resolution.height / NOISE_FREQ; ++i) {
         gray_image_array[distribution(engine) * image_resolution.height]
         [distribution(engine) * image_resolution.width] = distribution(engine) * 100 - 50;
     }
 
     vector<vector<int>> de_noised_image = de_noise(image_resolution, gray_image_array);
+
+    FIBITMAP *save_image_de_noised = FreeImage_Allocate(image_resolution.width, image_resolution.height, 24),
+            *save_image_noise = FreeImage_Allocate(image_resolution.width, image_resolution.height, 24);
+
+    for (int i = 0; i < image_resolution.height; ++i) {
+        for (int j = 0; j < image_resolution.width; ++j) {
+            col.rgbRed = col.rgbGreen = col.rgbBlue = de_noised_image[i][j];
+            FreeImage_SetPixelColor(save_image_de_noised, j, i, &col);
+            col.rgbRed = col.rgbGreen = col.rgbBlue = gray_image_array[i][j];
+            FreeImage_SetPixelColor(save_image_noise, j, i, &col);
+        }
+    }
+
+    FreeImage_Save(FIF, save_image_de_noised, ("de_noised_" + filename).c_str(), 0);
+    FreeImage_Save(FIF, save_image_noise, ("noised_" + filename).c_str(), 0);
+    FreeImage_DeInitialise();
 
     FILE *gnuplot_1, *gnuplot_2;
     if ((gnuplot_1 = popen(GNUPLOT_PATH, "w")) == nullptr) {
@@ -111,49 +143,63 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    fprintf(gnuplot_1, "set terminal windows color\n");
-    fprintf(gnuplot_1, "set size ratio -1\n");
-    fprintf(gnuplot_1, "set grid\n");
-    fprintf(gnuplot_1, "set palette defined (0 'black',255 'white')\n");
-    fprintf(gnuplot_1, "plot '-' matrix with image title 'de_noised'\n");
-    fprintf(gnuplot_1, "e\n");
+    //fprintf(gnuplot_1, "set terminal windows color\n");
+    //fprintf(gnuplot_1, "set size ratio -1\n");
+    //fprintf(gnuplot_1, "set grid\n");
+    //fprintf(gnuplot_1, "set palette defined (0 'black',255 'white')\n");
+    //fprintf(gnuplot_1, "plot '-' matrix with image title 'de_noised'\n");
+    //fprintf(gnuplot_1, "e\n");
 
     fprintf(gnuplot_2, "set terminal windows color\n");
-    fprintf(gnuplot_2, "set size ratio -1\n");
+    //fprintf(gnuplot_2, "set size ratio -1\n");
     fprintf(gnuplot_2, "set grid\n");
-    fprintf(gnuplot_2, "set palette defined (0 'black',255 'white')\n");
-    fprintf(gnuplot_2, "plot '-' matrix with image title 'noise'\n");
+    fprintf(gnuplot_2, "set logscale y\n");
+    //fprintf(gnuplot_2, "set palette defined (0 'black',255 'white')\n");
+    //fprintf(gnuplot_2, "plot '-' matrix with image title 'noise'\n");
+    fprintf(gnuplot_2, "plot '-' using 1:2 w lp title 'noise' ,'-' using 1:2 w lp title 'noise_fixed'\n");
     fprintf(gnuplot_2, "e\n");
 
 
-    for (int i = 0; i < image_resolution.height; ++i) {
-        for (int j = 0; j < image_resolution.width; ++j) {
-            fprintf(gnuplot_1, "%d\t", de_noised_image[i][j]);
-            fflush(gnuplot_1);
-        }
-        fprintf(gnuplot_1, "\n");
-        fflush(gnuplot_1);
+    //for (int i = 0; i < image_resolution.height; ++i) {
+    //    for (int j = 0; j < image_resolution.width; ++j) {
+    //        fprintf(gnuplot_1, "%d\t", de_noised_image[i][j]);
+    //        fflush(gnuplot_1);
+    //    }
+    //    fprintf(gnuplot_1, "\n");
+    //    fflush(gnuplot_1);
+    //}
+    //fprintf(gnuplot_1, "e\n");
+
+    //for (int i = 0; i < image_resolution.height; ++i) {
+    //    for (int j = 0; j < image_resolution.width; ++j) {
+    //        fprintf(gnuplot_2, "%d\t", gray_image_array[i][j]);
+    //        fflush(gnuplot_2);
+    //    }
+    //    fprintf(gnuplot_2, "\n");
+    //    fflush(gnuplot_2);
+    //}
+    //fprintf(gnuplot_2, "e\n");
+    for (int i = 0; i < counter.size(); ++i) {
+        if (counter[i] == 0)continue;
+        fprintf(gnuplot_2, "%d\t%d\n", i, counter[i]);
     }
-    fprintf(gnuplot_1, "e\n");
+    fprintf(gnuplot_2, "e\n");
+    for (int i = 0; i < counter.size(); ++i) {
+        if (counter[i] == 0)continue;
+        fprintf(gnuplot_2, "%d\t%d\n", i, counter_1[i]);
+    }
+    fprintf(gnuplot_2, "e\n");
+
     pclose(gnuplot_1);
-
-    for (int i = 0; i < image_resolution.height; ++i) {
-        for (int j = 0; j < image_resolution.width; ++j) {
-            fprintf(gnuplot_2, "%d\t", gray_image_array[i][j]);
-            fflush(gnuplot_2);
-        }
-        fprintf(gnuplot_2, "\n");
-        fflush(gnuplot_2);
-    }
-    fprintf(gnuplot_2, "e\n");
     pclose(gnuplot_2);
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
     uint8_t k;
-    k = 5;
-    int near_end = 100;
+    k = 8;
+    int near_end = 7;
     auto *lock = new omp_lock_t;
+    int sum_threshold = 150;
     omp_init_lock(lock);
 
     vector<vector<int>> return_image;
@@ -177,8 +223,8 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             for (int l = height_start; l < height_end; ++l) {
 
                 int width_start, width_end;
-                width_start = j - near_end;
-                width_end = j + near_end;
+                width_start = j - near_end * 2;
+                width_end = j + near_end * 2;
                 if (width_start < 0)width_start = 0;
                 if (width_end > image_resolution.width)width_end = image_resolution.width;
                 for (int m = width_start; m < width_end; ++m) {
@@ -190,20 +236,32 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             sort(near_list.begin(), near_list.end());
             int o = 0;
             int sum = 0;
+            bool has_6 = false;
             for (int x: near_list) {
                 sum += x;
                 o++;
-                if (o == 6)break;
+                if (o == 6) {
+                    has_6 = true;
+                    break;
+                }
             }
 
-            omp_set_lock(lock);
-            if (sum > 400) {
+            int return_num;
+
+            if (sum > sum_threshold || !has_6) {
                 //cout << i << "x" << j << "=" << sum << endl;
                 auto cont = get_range(j, 3, input_image[i]).second;
-                return_image[i][j] = lsm(cont);
+                return_num = lsm(cont);
             } else {
-                return_image[i][j] = input_image[i][j];
+                return_num = input_image[i][j];
             }
+            omp_set_lock(lock);
+            if (sum > sum_threshold || !has_6) {
+                counter_1[sum / COUNT_WIDTH]++;
+            } else {
+                counter[sum / COUNT_WIDTH]++;
+            }
+            return_image[i][j] = return_num;
             omp_unset_lock(lock);
         }
     }
@@ -214,22 +272,18 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
 pair<unsigned int, vector<double>>
 get_range(int location, short width, vector<unsigned char> input_array) {
     vector<double> return_array;
-    int mode;
     return_array.resize(width * 2 + 1);
     if ((location - width) < 0) {
-        mode = 0;
         for (int i = 0; i <= width * 2; ++i) {
             return_array[i] = input_array[i];
         }
     } else if ((location + width) > input_array.size()) {
-        mode = 1;
         int j = 0;
         for (int i = static_cast<int>(input_array.size()) - (width * 2 + 1); i < input_array.size(); ++i) {
             return_array[j] = input_array[i];
             j++;
         }
     } else {
-        mode = 2;
         int j = 0;
         for (int i = static_cast<int>(location - width); i <= location + width; ++i) {
             return_array[j] = input_array[i];
@@ -264,4 +318,5 @@ double lsm(const vector<double> &data) {
     return a1 * static_cast<int>((length - 1) / 2) + a0;
 
 }
+
 #pragma clang diagnostic pop
