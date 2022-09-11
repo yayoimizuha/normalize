@@ -129,8 +129,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    FreeImage_Save(FIF, save_image_de_noised, ("de_noised_" + filename).c_str(), 0);
-    FreeImage_Save(FIF, save_image_noise, ("noised_" + filename).c_str(), 0);
+    FreeImage_Save(FIF_PNG, save_image_de_noised, ("de_noised_" + filename + ".png").c_str(), 0);
+    FreeImage_Save(FIF_PNG, save_image_noise, ("noised_" + filename + ".png").c_str(), 0);
     FreeImage_DeInitialise();
 
     FILE *gnuplot_1, *gnuplot_2;
