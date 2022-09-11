@@ -160,9 +160,9 @@ int main(int argc, char *argv[]) {
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
-    uint8_t color, k,near_end;
+    uint8_t color, k, near_end;
     k = 5;
-    near_end=20;
+    near_end = 10;
     vector<int> near_list;
     vector<vector<int>> return_image;
     return_image.resize(image_resolution.height);
@@ -199,9 +199,9 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 if (o == 6)break;
             }
             //return_image[i][j] = sum;
-            if (sum > 400) {
-                cout << i << "\t" << j << "\t" << sum << endl;
-                return_image[i][j] = get_range(j, 4, input_image[i]).second[5];
+            if (sum > 200) {
+                cout << i << "x" << j << "=" << sum << endl;
+                return_image[i][j] = lsm(get_range(j, 4, input_image[i]).second);
             } else {
                 return_image[i][j] = input_image[i][j];
             }
@@ -264,6 +264,6 @@ double lsm(const vector<double> &data) {
     a0 = (A11 * A02 - A12 * A01) / d;
     a1 = (A12 * A00 - A01 * A02) / d;
 
-    return a1 * static_cast<int>(length / 2) + a0;
+    return a1 * static_cast<int>((length - 1) / 2) + a0;
 
 }
