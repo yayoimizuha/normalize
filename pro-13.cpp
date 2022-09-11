@@ -199,12 +199,13 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 if (o == 6)break;
             }
             //return_image[i][j] = sum;
-            if (sum > 200) {
+            if (sum > 700) {
                 cout << i << "x" << j << "=" << sum << endl;
                 return_image[i][j] = lsm(get_range(j, 4, input_image[i]).second);
             } else {
                 return_image[i][j] = input_image[i][j];
             }
+            //return_image[i][j] = sum;
 
         }
     }
