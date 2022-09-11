@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
     uint8_t color, k,near_end;
-    k = 10;
+    k = 5;
     near_end=20;
     vector<int> near_list;
     vector<vector<int>> return_image;
@@ -177,7 +177,6 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             height_end = i + near_end;
             if (height_start < 0)height_start = 0;
             if (height_end > image_resolution.height)height_end = image_resolution.height;
-
             for (int l = height_start; l < height_end; ++l) {
 
                 int width_start, width_end;
@@ -185,7 +184,7 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 width_end = i + near_end;
                 if (width_start < 0)width_start = 0;
                 if (width_end > image_resolution.width)width_end = image_resolution.width;
-
+//#pragma omp parallel for shared(near_list)
                 for (int m = 0; m < image_resolution.width; ++m) {
                     if (abs(input_image[l][m] - color) < k)
                         near_list.emplace_back((i - l) * (i - l) + (j - m) * (j - m));
