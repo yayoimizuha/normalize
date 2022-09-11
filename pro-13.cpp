@@ -147,9 +147,9 @@ int main(int argc, char *argv[]) {
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
-    uint8_t k, near_end;
+    uint8_t k;
     k = 5;
-    near_end = 30;
+    int near_end = 100;
     auto *lock = new omp_lock_t;
     omp_init_lock(lock);
 
@@ -174,8 +174,8 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             for (int l = height_start; l < height_end; ++l) {
 
                 int width_start, width_end;
-                width_start = i - near_end;
-                width_end = i + near_end;
+                width_start = j - near_end;
+                width_end = j + near_end;
                 if (width_start < 0)width_start = 0;
                 if (width_end > image_resolution.width)width_end = image_resolution.width;
                 for (int m = width_start; m < width_end; ++m) {
@@ -194,10 +194,10 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             }
 
             omp_set_lock(lock);
-            if (sum > 7000) {
+            if (sum > 400) {
                 //cout << i << "x" << j << "=" << sum << endl;
-                auto cont = get_range(j, 1, input_image[i]).second;
-                return_image[i][j] = accumulate(cont.begin(), cont.end(), 0.0) / cont.size();
+                auto cont = get_range(j, 3, input_image[i]).second;
+                return_image[i][j] = lsm(cont);
             } else {
                 return_image[i][j] = input_image[i][j];
             }
