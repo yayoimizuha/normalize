@@ -41,21 +41,17 @@ int main(int argc, char *argv[]) {
             cerr << "File not exist: " << argv[1] << endl;
             return EXIT_FAILURE;
         }
-
     }
+
     FREE_IMAGE_FORMAT FIF = FreeImage_GetFileType(argv[1]);
-
     FIBITMAP *image = FreeImage_Load(FIF, argv[1]);
-
     if (!image) {
         throw runtime_error("Load failed!");
     }
 
-
     FIBITMAP *image32 = FreeImage_ConvertTo32Bits(image);
     FreeImage_Unload(image);
 
-    //pair<unsigned int, unsigned int> resolution(FreeImage_GetWidth(image32), FreeImage_GetHeight(image32));
     resolution image_resolution = {static_cast<int>(FreeImage_GetWidth(image32)),
                                    static_cast<int>(FreeImage_GetHeight(image32))};
     RGBQUAD col;
@@ -91,11 +87,10 @@ int main(int argc, char *argv[]) {
         }
     }
     raw_image_array.clear();
-    //system("pause");
 
     cout << image_resolution.width << "x" << image_resolution.height << endl;
 
-    //ノイズを生成。
+    //ノイズを生成
     for (int i = 0; i < image_resolution.width * image_resolution.height / NOISE_FREQ; ++i) {
         gray_image_array[distribution(engine) * image_resolution.height]
         [distribution(engine) * image_resolution.width] = distribution(engine) * 100 - 50;
@@ -112,6 +107,7 @@ int main(int argc, char *argv[]) {
         cerr << "Can't execute gnuplot_1. " << GNUPLOT_PATH << endl;
         return EXIT_FAILURE;
     }
+
     fprintf(gnuplot_1, "set terminal windows color\n");
     fprintf(gnuplot_1, "set size ratio -1\n");
     fprintf(gnuplot_1, "set grid\n");
@@ -131,39 +127,29 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < image_resolution.width; ++j) {
             fprintf(gnuplot_1, "%d\t", de_noised_image[i][j]);
             fflush(gnuplot_1);
-            //fprintf(stdout, "%d\t", de_noised_image[i][j]);
-
         }
         fprintf(gnuplot_1, "\n");
         fflush(gnuplot_1);
-        //fprintf(stdout, "\n");
     }
     fprintf(gnuplot_1, "e\n");
     pclose(gnuplot_1);
-
 
     for (int i = 0; i < image_resolution.height; ++i) {
         for (int j = 0; j < image_resolution.width; ++j) {
             fprintf(gnuplot_2, "%d\t", gray_image_array[i][j]);
             fflush(gnuplot_2);
-            //fprintf(stdout, "%d\t", de_noised_image[i][j]);
-
         }
         fprintf(gnuplot_2, "\n");
         fflush(gnuplot_2);
-        //fprintf(stdout, "\n");
     }
     fprintf(gnuplot_2, "e\n");
-
     pclose(gnuplot_2);
-
-
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
     uint8_t k, near_end;
     k = 5;
-    near_end = 10;
+    near_end = 30;
     auto *lock = new omp_lock_t;
     omp_init_lock(lock);
 
@@ -172,6 +158,7 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
     for (int i = 0; i < image_resolution.height; ++i) {
         return_image[i].resize(image_resolution.width);
     }
+
 #pragma omp parallel for
     for (int i = 0; i < image_resolution.height; ++i) {
         for (int j = 0; j < image_resolution.width; ++j) {
@@ -191,11 +178,12 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 width_end = i + near_end;
                 if (width_start < 0)width_start = 0;
                 if (width_end > image_resolution.width)width_end = image_resolution.width;
-                for (int m = 0; m < image_resolution.width; ++m) {
+                for (int m = width_start; m < width_end; ++m) {
                     if (abs(input_image[l][m] - color) < k)
                         near_list.emplace_back((i - l) * (i - l) + (j - m) * (j - m));
                 }
             }
+
             sort(near_list.begin(), near_list.end());
             int o = 0;
             int sum = 0;
@@ -204,22 +192,19 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 o++;
                 if (o == 6)break;
             }
-            //return_image[i][j] = sum;
+
             omp_set_lock(lock);
-            if (sum > 700) {
-                cout << i << "x" << j << "=" << sum << endl;
-                return_image[i][j] = lsm(get_range(j, 4, input_image[i]).second);
+            if (sum > 7000) {
+                //cout << i << "x" << j << "=" << sum << endl;
+                auto cont = get_range(j, 1, input_image[i]).second;
+                return_image[i][j] = accumulate(cont.begin(), cont.end(), 0.0) / cont.size();
             } else {
                 return_image[i][j] = input_image[i][j];
             }
             omp_unset_lock(lock);
-            //return_image[i][j] = sum;
-
         }
     }
     return return_image;
-
-
 }
 
 

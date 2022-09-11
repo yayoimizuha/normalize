@@ -15,7 +15,7 @@ mt19937 engine(seed_gen());
 uniform_real_distribution<double> distribution(-0.15, 0.15);
 
 pair<unsigned int, vector<double>>
-get_range(int location, short width, vector<unsigned char> input_array);
+get_range(int location, short width, vector<double> input_array);
 
 double lsm(const vector<double> &data);
 
