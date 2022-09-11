@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <omp.h>
 
 using namespace std;
 using namespace std::filesystem;
@@ -160,16 +161,22 @@ int main(int argc, char *argv[]) {
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
-    uint8_t color, k, near_end;
+    uint8_t k, near_end;
     k = 5;
     near_end = 10;
-    vector<int> near_list;
+    auto *lock = new omp_lock_t;
+    omp_init_lock(lock);
+
     vector<vector<int>> return_image;
     return_image.resize(image_resolution.height);
     for (int i = 0; i < image_resolution.height; ++i) {
         return_image[i].resize(image_resolution.width);
+    }
+#pragma omp parallel for
+    for (int i = 0; i < image_resolution.height; ++i) {
         for (int j = 0; j < image_resolution.width; ++j) {
-            color = input_image[i][j];
+            auto color = input_image[i][j];
+            vector<int> near_list;
             near_list.clear();
 
             int height_start, height_end;
@@ -184,7 +191,6 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 width_end = i + near_end;
                 if (width_start < 0)width_start = 0;
                 if (width_end > image_resolution.width)width_end = image_resolution.width;
-//#pragma omp parallel for shared(near_list)
                 for (int m = 0; m < image_resolution.width; ++m) {
                     if (abs(input_image[l][m] - color) < k)
                         near_list.emplace_back((i - l) * (i - l) + (j - m) * (j - m));
@@ -199,12 +205,14 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                 if (o == 6)break;
             }
             //return_image[i][j] = sum;
+            omp_set_lock(lock);
             if (sum > 700) {
                 cout << i << "x" << j << "=" << sum << endl;
                 return_image[i][j] = lsm(get_range(j, 4, input_image[i]).second);
             } else {
                 return_image[i][j] = input_image[i][j];
             }
+            omp_unset_lock(lock);
             //return_image[i][j] = sum;
 
         }
