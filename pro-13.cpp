@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "openmp-use-default-none"
+
 #include <iostream>
 #include <filesystem>
 #include <FreeImagePlus.h>
@@ -261,3 +264,4 @@ double lsm(const vector<double> &data) {
     return a1 * static_cast<int>((length - 1) / 2) + a0;
 
 }
+#pragma clang diagnostic pop
