@@ -15,7 +15,7 @@ mt19937 engine(seed_gen());
 uniform_real_distribution<double> distribution(-0.15, 0.15);
 
 pair<unsigned int, vector<double>>
-get_range(int location, short width, vector<double> input_array);
+get_range(int location, short width,const vector<double> &input_array);
 
 double lsm(const vector<double> &data);
 
@@ -66,7 +66,7 @@ int main() {
 
 
     for (int i = 0; i < static_cast<int>(LENGTH / PITCH); ++i) {
-        auto range = get_range(i, 40, output);
+        auto range = get_range(i, 100, output);
         de_noise[i] = lsm(range.second);
     }
     for (int i = 0; i < static_cast<size_t>(LENGTH / PITCH); ++i) {
