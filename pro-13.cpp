@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
 
     cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
          << duration_cast<milliseconds>(system_clock::now() - added_noise_time).count()
-         << "ms\t] -- Add noise at 1/" << NOISE_FREQ << "." << endl;
+         << "ms\t] -- de_noised." << endl;
     auto de_noised_time = system_clock::now();
 
     FIBITMAP *save_image_de_noised = FreeImage_Allocate(image_resolution.width, image_resolution.height, 24),
@@ -159,10 +159,10 @@ int main(int argc, char *argv[]) {
     string name_save_image_de_noised, name_save_image_noise;
     name_save_image_de_noised = "de_noised_" + filename.replace_extension("").string() + ".png";
     name_save_image_noise = "noised_" + filename.replace_extension("").string() + ".png";
-    cout << "save: " << name_save_image_de_noised << endl;
-    cout << "save: " << name_save_image_noise << endl;
     FreeImage_Save(FIF_PNG, save_image_de_noised, name_save_image_de_noised.c_str(), 0);
+    cout << "save: " << name_save_image_de_noised << endl;
     FreeImage_Save(FIF_PNG, save_image_noise, name_save_image_noise.c_str(), 0);
+    cout << "save: " << name_save_image_noise << endl;
 
     cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
          << duration_cast<milliseconds>(system_clock::now() - de_noised_time).count()
@@ -249,7 +249,8 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             return_image_c[i][j] = return_num;
         }
     }
-    cout << "\r|=================================================>| 100%" << endl;
+    cout << "\r[" << duration_cast<milliseconds>(system_clock::now() - start_time).count()
+         << "ms]|=================================================>| 100%" << endl;
     for (int i = 0; i < image_resolution.height; ++i) {
         for (int j = 0; j < image_resolution.width; ++j) {
             return_image[i][j] = return_image_c[i][j];
