@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <omp.h>
 #include <array>
-#include <compare>
 
 using namespace std;
 using namespace filesystem;
@@ -176,15 +175,15 @@ int main(int argc, char *argv[]) {
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
     const uint8_t k = 8;
     const int near_end = 7;
-    auto *lock = new omp_lock_t;
     const uint8_t sum_threshold = 150;
-    omp_init_lock(lock);
     unsigned long long progress = 0, before_progress = 1;
 
     vector<vector<int>> return_image;
+    int **return_image_c = (int **) malloc(sizeof(int *) * image_resolution.height);
     return_image.resize(image_resolution.height);
     for (int i = 0; i < image_resolution.height; ++i) {
         return_image[i].resize(image_resolution.width);
+        return_image_c[i] = (int *) malloc(sizeof(int) * image_resolution.width);
     }
 
 #pragma omp parallel for shared(progress, before_progress)
@@ -246,13 +245,16 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                             << ((progress * 100) / (image_resolution.width * image_resolution.height)) << "%";
                 print_flag = true;
             } else {}
-            omp_set_lock(lock);
             if (print_flag)cout << output_text.str();
-            return_image[i][j] = return_num;
-            omp_unset_lock(lock);
+            return_image_c[i][j] = return_num;
         }
     }
     cout << "\r|=================================================>| 100%" << endl;
+    for (int i = 0; i < image_resolution.height; ++i) {
+        for (int j = 0; j < image_resolution.width; ++j) {
+            return_image[i][j] = return_image_c[i][j];
+        }
+    }
     return return_image;
 }
 
