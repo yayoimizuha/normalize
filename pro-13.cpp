@@ -9,13 +9,14 @@
 #include <algorithm>
 #include <omp.h>
 #include <array>
+#include <compare>
 
 using namespace std;
-using namespace std::filesystem;
+using namespace filesystem;
+using namespace chrono;
 
 #define GNUPLOT_PATH "C:\\Progra~1\\gnuplot\\bin\\gnuplot.exe -persist"
 #define NOISE_FREQ 1000
-#define COUNT_WIDTH 10
 
 pair<unsigned int, vector<double>>
 get_range(int location, short width, vector<unsigned char> input_array);
@@ -30,9 +31,8 @@ struct resolution {
     int width;
     int height;
 };
-//array<int, static_cast<size_t>(1e+8)> counter = {};
-//array<int, static_cast<size_t>(1e+8)> counter_1 = {};
 
+auto start_time = system_clock::now();
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image);
 
@@ -40,9 +40,15 @@ int main(int argc, char *argv[]) {
     FreeImage_Initialise();
     cout << "FreeImage Library Version: " << FreeImage_GetVersion() << endl;
     cout << FreeImage_GetCopyrightMessage() << endl;
+
+    cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
+         << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms\t] -- Program initialised."
+         << endl;
+    auto initialised_time = system_clock::now();
+
     string argv1;
     setlocale(LC_ALL, "");
-    wchar_t *wc = (wchar_t *) calloc(_mbstrlen(argv[1]) + 1, MB_LEN_MAX);
+    auto *wc = (wchar_t *) calloc(_mbstrlen(argv[1]) + 1, MB_LEN_MAX);
     if (argc != 2) {
         cerr << "Invalid argument." << argc << endl;
         return EXIT_FAILURE;
@@ -71,6 +77,13 @@ int main(int argc, char *argv[]) {
 
     resolution image_resolution = {static_cast<int>(FreeImage_GetWidth(image32)),
                                    static_cast<int>(FreeImage_GetHeight(image32))};
+
+
+    cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
+         << duration_cast<milliseconds>(system_clock::now() - initialised_time).count()
+         << "ms\t] -- Load image finished."
+         << endl;
+    auto image_loaded_time = system_clock::now();
     RGBQUAD col;
     bool isGray = true;
     vector<vector<vector<uint8_t>>> raw_image_array;
@@ -107,13 +120,31 @@ int main(int argc, char *argv[]) {
 
     cout << "image resolution: " << image_resolution.width << "x" << image_resolution.height << endl;
 
+    cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
+         << duration_cast<milliseconds>(system_clock::now() - image_loaded_time).count()
+         << "ms\t] -- Convert to 8bit grayscale array." << endl;
+    auto convert2array_time = system_clock::now();
+
+
     //ƒmƒCƒY‚ð¶¬
     for (int i = 0; i < image_resolution.width * image_resolution.height / NOISE_FREQ; ++i) {
         gray_image_array[distribution(engine) * image_resolution.height]
         [distribution(engine) * image_resolution.width] = distribution(engine) * 100 - 50;
     }
 
+
+    cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
+         << duration_cast<milliseconds>(system_clock::now() - convert2array_time).count()
+         << "ms\t] -- Add noise at 1/" << NOISE_FREQ << "." << endl;
+    auto added_noise_time = system_clock::now();
+
+
     vector<vector<int>> de_noised_image = de_noise(image_resolution, gray_image_array);
+
+    cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
+         << duration_cast<milliseconds>(system_clock::now() - added_noise_time).count()
+         << "ms\t] -- Add noise at 1/" << NOISE_FREQ << "." << endl;
+    auto de_noised_time = system_clock::now();
 
     FIBITMAP *save_image_de_noised = FreeImage_Allocate(image_resolution.width, image_resolution.height, 24),
             *save_image_noise = FreeImage_Allocate(image_resolution.width, image_resolution.height, 24);
@@ -133,31 +164,13 @@ int main(int argc, char *argv[]) {
     cout << "save: " << name_save_image_noise << endl;
     FreeImage_Save(FIF_PNG, save_image_de_noised, name_save_image_de_noised.c_str(), 0);
     FreeImage_Save(FIF_PNG, save_image_noise, name_save_image_noise.c_str(), 0);
-    FreeImage_DeInitialise();
 
-    //FILE *gnuplot;
-    //if ((gnuplot = popen(GNUPLOT_PATH, "w")) == nullptr) {
-    //    cerr << "Can't execute gnuplot. " << GNUPLOT_PATH << endl;
-    //    return EXIT_FAILURE;
-    //}
-//
-    //fprintf(gnuplot, "set terminal windows color\n");
-    //fprintf(gnuplot, "set grid\n");
-    //fprintf(gnuplot, "set logscale y\n");
-    //fprintf(gnuplot, "plot '-' using 1:2 w lp title 'noise' ,'-' using 1:2 w lp title 'noise_fixed'\n");
-    //fprintf(gnuplot, "e\n");
-//
-    //for (int i = 0; i < counter.size(); ++i) {
-    //    if (counter[i] == 0)continue;
-    //    fprintf(gnuplot, "%d\t%d\n", i, counter[i]);
-    //}
-    //fprintf(gnuplot, "e\n");
-    //for (int i = 0; i < counter.size(); ++i) {
-    //    if (counter[i] == 0)continue;
-    //    fprintf(gnuplot, "%d\t%d\n", i, counter_1[i]);
-    //}
-    //fprintf(gnuplot, "e\n");
-    //pclose(gnuplot);
+    cout << '[' << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms+"
+         << duration_cast<milliseconds>(system_clock::now() - de_noised_time).count()
+         << "ms\t] -- Save images." << endl;
+    auto saved_time = system_clock::now();
+
+    FreeImage_DeInitialise();
 }
 
 vector<vector<int>> de_noise(struct resolution image_resolution, const vector<vector<uint8_t>> &input_image) {
@@ -227,7 +240,8 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
             bool print_flag = false;
             stringstream output_text;
             if (p_percent != bp_percent) {
-                output_text << "\r|" << string(static_cast<short>(p_percent / 2), '=') << '>'
+                output_text << "\r[" << duration_cast<milliseconds>(system_clock::now() - start_time).count() << "ms]|"
+                            << string(static_cast<short>(p_percent / 2), '=') << '>'
                             << string(static_cast<short>(49 - p_percent / 2), ' ') << "| "
                             << ((progress * 100) / (image_resolution.width * image_resolution.height)) << "%";
                 print_flag = true;
