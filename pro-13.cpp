@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <omp.h>
 #include <array>
+#include <numeric>
 
 using namespace std;
 using namespace filesystem;
@@ -20,7 +21,12 @@ using namespace chrono;
 pair<unsigned int, vector<double>>
 get_range(int location, short width, vector<unsigned char> input_array);
 
-double lsm(const vector<double> &data);;
+double lsm(const vector<double> &data);
+
+long long int_pow(long long x, unsigned short y);
+
+double lsm_ext(const vector<pair<float, double>> &data, uint8_t k, double x);
+
 
 random_device seed_gen;
 mt19937 engine(seed_gen());
@@ -308,6 +314,45 @@ double lsm(const vector<double> &data) {
 
     return a1 * static_cast<int>((length - 1) / 2) + a0;
 
+}
+
+long long int_pow(long long x, unsigned short y) {
+    long long return_num = 1;
+    for (int i = 0; i < y; ++i) {
+        return_num *= x;
+    }
+    return return_num;
+}
+
+vector<vector<double>> Transpose_array(const vector<vector<double>> &input_array) {
+    auto array_length = input_array[0].size();
+    for (const vector<double> &row: input_array) {
+        if (array_length != row.size()) {
+            cout << "Array is not square" << endl;
+            return {{-1}};
+        }
+    }
+    vector<vector<double>> return_array;
+    return_array.resize(array_length);
+    for (int i = 0; i < array_length; ++i) {
+        return_array[i].resize(input_array.size());
+        for (int j = 0; j < input_array.size(); ++j) {
+            return_array[i][j] = input_array[j][i];
+        }
+    }
+}
+
+double lsm_ext(const vector<pair<float, double>> &data, uint8_t k, double x) {
+    vector<vector<double>> A;
+    A.resize(data.size());
+    for (int i = 0; i < A.size(); ++i) {
+        A[i].resize(k + 1);
+        for (int j = k; j >= 0; --j) {
+            A[i][j] = pow(data[i].first, j);
+        }
+    }
+    vector<double> B;
+    B.resize(data.size());
 }
 
 #pragma clang diagnostic pop
