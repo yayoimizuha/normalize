@@ -192,7 +192,7 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
         return_image_c[i] = (int *) malloc(sizeof(int) * image_resolution.width);
     }
 
-#pragma omp parallel for shared(progress, before_progress)
+#pragma omp  parallel for shared(progress, before_progress)
     for (int i = 0; i < image_resolution.height; ++i) {
         for (int j = 0; j < image_resolution.width; ++j) {
             auto color = input_image[i][j];
@@ -251,7 +251,7 @@ vector<vector<int>> de_noise(struct resolution image_resolution, const vector<ve
                             << ((progress * 100) / (image_resolution.width * image_resolution.height)) << "%";
                 print_flag = true;
             } else {}
-            if (print_flag)cout << output_text.str();
+            //if (print_flag)cout << output_text.str();
             return_image_c[i][j] = return_num;
         }
     }
@@ -340,6 +340,105 @@ vector<vector<double>> Transpose_array(const vector<vector<double>> &input_array
             return_array[i][j] = input_array[j][i];
         }
     }
+    return return_array;
+}
+
+vector<vector<double>> Produce_array(const vector<vector<double>> &arrayA, const vector<vector<double>> &arrayB) {
+    if (arrayA[0].size() != arrayB.size()) {
+        cout << "Can't define array product." << endl;
+    }
+    vector<double> vecA;
+    vecA.resize(arrayB.size());
+    vector<double> vecB;
+    vecB.resize(arrayB.size());
+
+    vector<vector<double>> arrayC;
+    arrayC.resize(arrayA.size());
+    for (int i = 0; i < arrayA.size(); ++i) {
+        arrayC[i].resize(arrayB[0].size());
+        for (int j = 0; j < arrayB[0].size(); ++j) {
+            for (int k = 0; k < arrayB.size(); ++k) {
+                vecA[k] = arrayA[i][k];
+                vecB[k] = arrayB[k][j];
+            }
+            double inner_product = 0;
+            for (int k = 0; k < arrayB.size(); ++k) {
+                inner_product += vecA[k] + vecB[k];
+            }
+            arrayC[i][j] = inner_product;
+        }
+    }
+    return arrayC;
+}
+
+bool check_Inverted_array(const vector<vector<double>> &arrayA, const vector<vector<double>> &arrayB) {
+    double inner_product;
+    double ans;
+    for (int i = 0; i < arrayA.size(); ++i) {
+        for (int j = 0; j < arrayA.size(); ++j) {
+            inner_product = 0;
+            for (int k = 0; k < arrayA.size(); ++k) {
+                inner_product += arrayA[i][k] * arrayB[k][j];
+            }
+            ans = (i == j) ? 1 : 0;
+            if (fabs(ans - inner_product) > 1e-7)return false;
+        }
+    }
+    return true;
+}
+
+vector<vector<double>> Inverse_array(const vector<vector<double>> &input_array) {
+    vector<vector<double>> return_array, sweeper;
+    double a;
+    sweeper.resize(input_array.size());
+    for (int i = 0; i < input_array.size(); ++i) {
+        sweeper[i].resize(input_array.size() * 2);
+        for (int j = 0; j < input_array.size(); ++j) {
+            sweeper[i][j] = input_array[i][j];
+            sweeper[i][input_array.size() + j] = (i == j) ? 1 : 0;
+        }
+    }
+
+    for (int k = 0; k < input_array.size(); ++k) {
+        double max = fabs(sweeper[k][k]);
+        int max_i = k;
+        for (int i = k + 1; i < input_array.size(); ++i) {
+            if (fabs(sweeper[i][k] > max)) {
+                max = sweeper[i][k];
+                max_i = i;
+            }
+        }
+        if (fabs(sweeper[max_i][k] <= 1e-7)) {
+            return {{-1}};
+        }
+        if (k != max_i) {
+            for (int j = 0; j < input_array.size() * 2; ++j) {
+                double tmp = sweeper[max_i][j];
+                sweeper[max_i][j] = sweeper[k][j];
+                sweeper[k][j] = tmp;
+            }
+        }
+
+        a = 1 / sweeper[k][k];
+
+        for (int j = 0; j < input_array.size() * 2; ++j) {
+            sweeper[k][j] *= a;
+        }
+        for (int i = 0; i < input_array.size(); ++i) {
+            if (i == k)continue;
+
+            a = -sweeper[i][k];
+            for (int j = 0; j < input_array.size() * 2; ++j) {
+                sweeper[i][j] += sweeper[k][j] * a;
+            }
+        }
+    }
+    for (int i = 0; i < input_array.size(); ++i) {
+        for (int j = 0; j < input_array.size(); ++j) {
+            return_array[i][j] = sweeper[i][input_array.size() + j];
+        }
+    }
+    return return_array;
 }
 
 double lsm_ext(const vector<pair<float, double>> &data, uint8_t k, double x) {
@@ -353,6 +452,11 @@ double lsm_ext(const vector<pair<float, double>> &data, uint8_t k, double x) {
     }
     vector<double> B;
     B.resize(data.size());
+    auto AT = Transpose_array(A);
+    auto ATA = Produce_array(AT, A);
+    auto ATA_1 = Inverse_array(ATA);
+    auto ATA_1AT = Produce_array(ATA_1, AT);
+    auto X = Produce_array(ATA_1AT, B);
 }
 
 #pragma clang diagnostic pop
