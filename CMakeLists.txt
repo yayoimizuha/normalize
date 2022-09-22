@@ -13,5 +13,6 @@ endif ()
 add_executable(normalize main.cpp)
 add_executable(pro-12 pro-12.cpp)
 add_executable(pro-13 pro-13.cpp)
+add_executable(test test.cpp)
 
 target_link_libraries(pro-13 FreeImage)
