@@ -48,6 +48,7 @@ int main() {
                      "'-' using 1:2 w l title 'de-noised average' lc 'blue',"
                      "'-' using 1:2 w l title 'de-noised median' lc 'green'\n");
 
+    double lsm_diff, ave_diff, median_diff, random_diff;
 
     for (int i = 0; i < static_cast<size_t>(LENGTH / PITCH); ++i) {
         fprintf(gnuplot, "%f\t%f\n", i * PITCH, source[i]);
@@ -60,27 +61,29 @@ int main() {
     }
     fprintf(gnuplot, "e\n");
 
-
+    random_diff = 0.0;
     for (int i = 0; i < static_cast<size_t>(LENGTH / PITCH); ++i) {
         fprintf(gnuplot, "%f\t%f\n", i * PITCH, output[i]);
+        random_diff += fabs(output[i] - source[i]);
     }
     fprintf(gnuplot, "e\n");
 
-
+    lsm_diff = 0.0;
     for (int i = 0; i < static_cast<int>(LENGTH / PITCH); ++i) {
         int x = 2000;
         auto range = get_range(i, x, output);
         vector<pair<float, double>> input_array;
         input_array.resize(range.second.size());
         for (int j = 0; j < range.second.size(); ++j) {
-            input_array[j].first = j;
+            input_array[j].first = static_cast<float>(j);
             input_array[j].second = range.second[j];
         }
         if (i < x)x = i;
         if ((LENGTH / PITCH) < (i + x)) {
             x = (x * 2 + i - static_cast<int>(LENGTH / PITCH));
         }
-        de_noise[i] = lsm_ext(input_array, 6, x);
+        de_noise[i] = lsm_ext(input_array, 11, x);
+        lsm_diff += fabs(de_noise[i] - source[i]);
     }
     for (int i = 0; i < static_cast<size_t>(LENGTH / PITCH); ++i) {
         fprintf(gnuplot, "%f\t%f\n", i * PITCH, de_noise[i]);
@@ -88,11 +91,12 @@ int main() {
     fprintf(gnuplot, "e\n");
 
 
-
+    ave_diff = 0.0;
     for (int i = 0; i < static_cast<int>(LENGTH / PITCH); ++i) {
         auto range = get_range(i, 40, output);
         auto average = accumulate(range.second.begin(), range.second.end(), 0.0) / range.first;
         de_noise[i] = average;
+        ave_diff += fabs(de_noise[i] - source[i]);
     }
     for (int i = 0; i < static_cast<size_t>(LENGTH / PITCH); ++i) {
         fprintf(gnuplot, "%f\t%f\n", i * PITCH, de_noise[i]);
@@ -100,11 +104,13 @@ int main() {
     fprintf(gnuplot, "e\n");
 
 
+    median_diff = 0.0;
     for (int i = 0; i < static_cast<int>(LENGTH / PITCH); ++i) {
         auto range = get_range(i, 40, output);
         sort(range.second.begin(), range.second.end());
         auto median = range.second[(range.first - 1) / 2];
         de_noise[i] = median;
+        median_diff += fabs(de_noise[i] - source[i]);
     }
     for (int i = 0; i < static_cast<size_t>(LENGTH / PITCH); ++i) {
         fprintf(gnuplot, "%f\t%f\n", i * PITCH, de_noise[i]);
@@ -113,6 +119,10 @@ int main() {
 
 
     pclose(gnuplot);
+    cout << "noise diff:" << random_diff << endl;
+    cout << "LSM diff:" << lsm_diff << endl;
+    cout << "average diff:" << ave_diff << endl;
+    cout << "median diff:" << median_diff << endl;
 }
 
 pair<unsigned int, vector<double>>
@@ -286,16 +296,11 @@ double lsm_ext(const vector<pair<float, double>> &data, uint8_t k, double x) {
     auto ATA_1 = Inverse_array(ATA);
     auto ATA_1AT = Produce_array(ATA_1, AT);
     auto X = Produce_array(ATA_1AT, B);
-    //for (const auto &i: X) {
-    //    for (auto j: i) {
-    //        std::cout << j << std::endl;
-    //    }
-    //}
+
     double ans = 0.0;
     for (int i = 0; i <= k; ++i) {
         ans += pow(x, k - i) * X[i][0];
     }
-    //cout << ans << endl;
     return ans;
 }
 
